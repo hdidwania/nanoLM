@@ -41,33 +41,35 @@ def main(args):
 
     i_step_global = 0
     for i_epoch in range(args.n_epochs):
+        epoch_loss_sum = 0
         for i_step, sentence_batch in enumerate(dataloader):
             i_step_global += 1
             sentence_batch = [
                 tokenizer.encode(
-                    sentence, return_mask=True, pad_to_max=True, add_eos=True
+                    sentence, return_pad_mask=True, pad_to_max=True, add_eos=True
                 )
                 for sentence in sentence_batch
             ]
-            sentence_token_ids, sentence_masks = list(zip(*sentence_batch))
+            sentence_token_ids, sentence_pad_masks = list(zip(*sentence_batch))
             sentence_token_ids = torch.tensor(sentence_token_ids).to(device)
             # For a sequence 1..N, use 1..N-1 as input and 2..N as output
             encoded_input = sentence_token_ids[:, :-1]
             encoded_input.requires_grad = False
             encoded_output = sentence_token_ids[:, 1:]
             encoded_output.requires_grad = False
-            sentence_masks = torch.tensor(sentence_masks).to(device)
-            sentence_masks = sentence_masks[:, :-1]
+            sentence_pad_masks = torch.tensor(sentence_pad_masks).to(device)
+            sentence_pad_masks = sentence_pad_masks[:, :-1]
 
             model.train()
             optimizer.zero_grad()
             output_logits = model(encoded_input)
             loss_val = loss_fn(output_logits.transpose(-1, -2), encoded_output)
-            loss_val = loss_val * sentence_masks
+            loss_val = loss_val * sentence_pad_masks
             loss_val = loss_val.mean()
             loss_val.backward()
             optimizer.step()
 
+            epoch_loss_sum += loss_val
             print(
                 "\rGlobal Step {:3d} | Epoch {:2d}/{:2d} Step {:3d}/{:3d} | Loss {:.4f}".format(
                     i_step_global,
@@ -75,7 +77,7 @@ def main(args):
                     args.n_epochs,
                     i_step + 1,
                     len(dataloader),
-                    loss_val.item(),
+                    epoch_loss_sum /(i_step + 1),
                 ),
                 end="",
             )
