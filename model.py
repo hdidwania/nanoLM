@@ -66,9 +66,9 @@ class TransformerBlock(Module):
         not_mask = torch.triu(torch.ones(1, 1, N, N), diagonal=1).to(self.device)
         mask = not_mask == 0
         # TODO Understand this mask creation
-        # scaled_QK_masked = scaled_QK.masked_fill(mask, -1e9)
-        # attention_matrix = torch.softmax(scaled_QK_masked, dim=-1)
-        attention_matrix = torch.softmax(scaled_QK, dim=-1)
+        scaled_QK_masked = scaled_QK.masked_fill(mask, -1e9)
+        attention_matrix = torch.softmax(scaled_QK_masked, dim=-1)
+        # attention_matrix = torch.softmax(scaled_QK, dim=-1)
         return attention_matrix
 
 
