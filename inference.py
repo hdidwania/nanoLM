@@ -12,12 +12,12 @@ from tokenizer import Tokenizer
 
 MAXLEN = 128
 MINFREQ = 5
-LOAD_PATH = "saved-models/model-checkpoint-500.pt"
+LOAD_PATH = "saved-models/model-checkpoint-1000.pt"
 
 
 def decode_next(logits):
     output_token = torch.argmax(logits).item()
-
+    return output_token
 
 def main(args):
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -39,7 +39,6 @@ def main(args):
 
     context_text = input("Enter Context: ")
     tokens = tokenizer.encode(context_text)
-    print(tokens)
     curr_index = len(tokens)
     while len(tokens) < 100:
         curr_index += 1
