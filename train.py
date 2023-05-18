@@ -6,12 +6,19 @@ from torch.nn import CrossEntropyLoss
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 
+import tokenizer as tokenizer_
 from dataset import MovieData
 from model import LanguageModel
-from tokenizer import Tokenizer
 
-MAXLEN = 128
-MINFREQ = 5
+######### TODO MAIN #################
+# SELECT ANOTHER DATASET
+# OR CLEAN NON ENGLISH DATA
+####################################
+
+tokenizer_class_dict = {
+    "word": tokenizer_.WordTokenizer,
+    "char": tokenizer_.CharTokenizer,
+}
 SAVE_PATH = "saved-models/model-checkpoint-{}.pt"
 
 
@@ -19,18 +26,19 @@ def main(args):
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     print("Preparing Dataset")
-    data = MovieData(maxlen=MAXLEN)
+    data = MovieData(maxlen=args.maxlen)
     print("Preparing Tokenizer")
-    tokenizer = Tokenizer(maxlen=MAXLEN, minfreq=MINFREQ)
-    tokenizer.load(f"saved-models/tokenizer-{MAXLEN}-{MINFREQ}.pkl")
+    tokenizer = tokenizer_class_dict[args.tokenizer](
+        maxlen=args.maxlen, minfreq=args.minfreq, path=args.tokenizer_path
+    )
     print("Preparing Model")
     model = LanguageModel(
         dims=args.dims,
         heads=args.heads,
         nblocks=args.nblocks,
         vocab_size=len(tokenizer.vocab),
-        maxlen=MAXLEN,
-        padding_idx=tokenizer.word_to_idx["<PAD>"],
+        maxlen=args.maxlen,
+        padding_idx=tokenizer.token_to_idx["<PAD>"],
         device=device,
     )
 
@@ -77,7 +85,7 @@ def main(args):
                     args.n_epochs,
                     i_step + 1,
                     len(dataloader),
-                    epoch_loss_sum /(i_step + 1),
+                    epoch_loss_sum / (i_step + 1),
                 ),
                 end="",
             )
@@ -101,5 +109,19 @@ if __name__ == "__main__":
     parser.add_argument("--heads", type=int, default=4)
     parser.add_argument("--nblocks", type=int, default=3)
     parser.add_argument("--save_after_step", type=int, default=500)
+    parser.add_argument(
+        "--tokenizer", help="Type of tokenizer", choices=["word", "char"], required=True
+    )
+    parser.add_argument(
+        "--tokenizer_path",
+        help="Path of pickle file for loading the tokenizer",
+        required=True,
+    )
+    parser.add_argument(
+        "--maxlen", help="Maximum length of sentence", required=True, type=int
+    )
+    parser.add_argument(
+        "--minfreq", help="Minimum freq of words to retain", default=0, type=int
+    )
     args = parser.parse_args()
     main(args)
