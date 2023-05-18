@@ -1,9 +1,8 @@
 import numpy as np
 import torch
-from torch.nn import Dropout, Embedding, LayerNorm, Linear, Module
+from torch.nn import Dropout, Embedding, LayerNorm, Linear, Module, ReLU
 
 # TODO delete unrequired stuff : del
-# TODO add non linearities
 
 
 class TransformerBlock(Module):
@@ -28,6 +27,7 @@ class TransformerBlock(Module):
         self.dropout = Dropout(p=0.2)
         # TODO: Understand LayerNorm
         self.layernorm = LayerNorm(self.dims)
+        self.relu = ReLU()
 
     def forward(self, input):
         B, N, _ = input.shape
@@ -43,7 +43,7 @@ class TransformerBlock(Module):
         QKV = self.layernorm(QKV)
 
         # Feedforward
-        output = self.Wout(QKV)
+        output = self.relu(self.Wout(QKV))
 
         # Add and norm
         output += self.dropout(QKV)
