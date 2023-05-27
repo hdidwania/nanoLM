@@ -7,7 +7,6 @@ from model import LanguageModel
 
 MAXLEN = 512
 MINFREQ = 0
-LOAD_PATH = "saved-models/model-checkpoint-1000.pt"
 
 tokenizer_class_dict = {
     "word": tokenizer_.WordTokenizer,
@@ -26,10 +25,6 @@ def main(args):
     tokenizer = tokenizer_class_dict[args.tokenizer](
         maxlen=args.maxlen, minfreq=args.minfreq, path=args.tokenizer_path
     )
-    # tokenizer = tokenizer_.CharTokenizer(
-    #     maxlen=MAXLEN, minfreq=MINFREQ, path="./saved-models/tokenizer-char-512-0.pkl"
-    # )
-    # tokenizer.load(f"saved-models/tokenizer-{MAXLEN}-{MINFREQ}.pkl")
     print("Preparing Model")
     model = LanguageModel(
         dims=args.dims,
@@ -40,18 +35,20 @@ def main(args):
         padding_idx=tokenizer.token_to_idx["<PAD>"],
         device=device,
     )
-    model.load_state_dict(torch.load(LOAD_PATH))
+    model.load_state_dict(torch.load(args.model_path))
     model.eval()
 
     context_text = input("Enter Context: ")
-    tokens = tokenizer.encode(context_text)
+    tokens, pad_mask = tokenizer.encode(context_text, return_pad_mask=True)
     curr_index = len(tokens)
     while len(tokens) < 100:
         curr_index += 1
         tokens_input = torch.tensor([tokens]).to(device)
-        output_logits = model(tokens_input)
+        pad_mask_input = torch.tensor([pad_mask]).to(device)
+        output_logits = model(tokens_input, pad_mask_input)
         output_token = decode_next(output_logits[0][-1])
         tokens.append(output_token)
+        pad_mask.append(0)
         if output_token == tokenizer.token_to_idx[tokenizer.EOS_TOKEN]:
             break
     print(tokenizer.decode(tokens))
@@ -79,6 +76,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--minfreq", help="Minimum freq of words to retain", default=0, type=int
     )
+    parser.add_argument("--model-path", help="Path to saved model", required=True)
 
     args = parser.parse_args()
     main(args)

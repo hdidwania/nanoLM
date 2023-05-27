@@ -85,9 +85,7 @@ class Tokenizer:
             for w in tokens
         ]
         if return_pad_mask:
-            pad_mask = [
-                0 if t == self.token_to_idx[self.PAD_TOKEN] else 1 for t in tokens
-            ]
+            pad_mask = [1 if t == self.PAD_TOKEN else 0 for t in tokens]
             return token_ids, pad_mask
         else:
             return token_ids

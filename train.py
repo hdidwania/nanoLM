@@ -70,9 +70,8 @@ def main(args):
 
             model.train()
             optimizer.zero_grad()
-            output_logits = model(encoded_input)
+            output_logits = model(encoded_input, sentence_pad_masks)
             loss_val = loss_fn(output_logits.transpose(-1, -2), encoded_output)
-            loss_val = loss_val * sentence_pad_masks
             loss_val = loss_val.mean()
             loss_val.backward()
             optimizer.step()

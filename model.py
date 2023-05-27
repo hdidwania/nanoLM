@@ -29,32 +29,35 @@ class TransformerBlock(Module):
         self.layernorm = LayerNorm(self.dims)
         self.relu = ReLU()
 
-    def forward(self, input):
-        B, N, _ = input.shape
-        V = self.Wv(input)
+    def forward(self, x_input, pad_mask):
+        B, N, _ = x_input.shape
+        # print(x_input)
+        V = self.Wv(x_input)
+        # print(V)
+        # input()
         V = V.view(B, N, self.heads, self.dims_per_head).transpose(1, 2)
 
-        attention_matrix = self.calc_attention(input)
+        attention_matrix = self.calc_attention_weights(x_input, pad_mask)
         QKV = attention_matrix @ V
         QKV = QKV.transpose(1, 2).contiguous().view(B, N, -1)
 
         # Add and norm
-        QKV += self.dropout(input)
-        QKV = self.layernorm(QKV)
+        attention_sublayer_output = self.layernorm(x_input + self.dropout(QKV))
 
         # Feedforward
-        output = self.relu(self.Wout(QKV))
+        linear_sublayer_output = self.relu(self.Wout(attention_sublayer_output))
 
         # Add and norm
-        output += self.dropout(QKV)
-        output = self.layernorm(output)
+        final_output = self.layernorm(
+            attention_sublayer_output + self.dropout(linear_sublayer_output)
+        )
 
-        return QKV
+        return final_output
 
-    def calc_attention(self, input):
-        B, N, _ = input.shape
-        Q = self.Wq(input)
-        K = self.Wk(input)
+    def calc_attention_weights(self, x_input, pad_mask):
+        B, N, _ = x_input.shape
+        Q = self.Wq(x_input)
+        K = self.Wk(x_input)
 
         Q = Q.view(B, N, self.heads, self.dims_per_head).transpose(1, 2)
         K = K.view(B, N, self.heads, self.dims_per_head).transpose(1, 2)
@@ -63,12 +66,13 @@ class TransformerBlock(Module):
         QK = Q @ torch.transpose(K, -2, -1)
         # Scale
         scaled_QK = QK / np.sqrt(self.dims_per_head)
-        not_mask = torch.triu(torch.ones(1, 1, N, N), diagonal=1).to(self.device)
-        mask = not_mask == 0
-        # TODO Understand this mask creation
-        scaled_QK_masked = scaled_QK.masked_fill(mask, -1e9)
+        causal_mask = torch.triu(torch.ones(1, 1, N, N), diagonal=1).to(self.device)
+        causal_mask = causal_mask == 1
+        pad_mask = pad_mask.contiguous().view(B, 1, 1, -1).tile([1, 1, N, 1])
+        pad_mask = pad_mask == 1
+        final_mask = causal_mask | pad_mask
+        scaled_QK_masked = scaled_QK.masked_fill(final_mask, -1e9)
         attention_matrix = torch.softmax(scaled_QK_masked, dim=-1)
-        # attention_matrix = torch.softmax(scaled_QK, dim=-1)
         return attention_matrix
 
 
@@ -101,23 +105,23 @@ class LanguageModel(Module):
         self.pos_emb = self.pos_emb.unsqueeze(0)
         self.pos_emb.requires_grad = False
 
-        self.transformer_blocks = [
-            TransformerBlock(dims=self.dims, heads=self.heads, device=self.device).to(
-                self.device
-            )
-            for n in range(self.nblocks)
-        ]
+        self.transformer_blocks = torch.nn.ModuleList(
+            [
+                TransformerBlock(
+                    dims=self.dims, heads=self.heads, device=self.device
+                ).to(self.device)
+                for n in range(self.nblocks)
+            ]
+        )
 
         # Final logits
         self.Wout = Linear(self.dims, self.vocab_size).to(self.device)
 
         self.dropout = Dropout(p=0.2).to(self.device)
 
-    def forward(self, x):
-        # TODO: Take PAD mask into consideration?
+    def forward(self, x, pad_mask):
         x = self.word_emb(x) + self.pos_emb[:, : x.size(1)]
-        x = self.dropout(x)
         for t_block in self.transformer_blocks:
-            x = t_block(x)
+            x = t_block(x, pad_mask)
         x_out = self.Wout(x)
         return x_out
