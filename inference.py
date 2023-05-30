@@ -14,8 +14,12 @@ tokenizer_class_dict = {
 }
 
 
-def decode_next(logits):
-    output_token = torch.argmax(logits).item()
+def decode_next(logits, avoid_unk=False):
+    if not avoid_unk:
+        output_token = torch.argmax(logits).item()
+    else:
+        output_token = torch.topk(logits, k=2)
+        output_token = output_token.indices.cpu().numpy().tolist()
     return output_token
 
 
@@ -46,7 +50,11 @@ def main(args):
         tokens_input = torch.tensor([tokens]).to(device)
         pad_mask_input = torch.tensor([pad_mask]).to(device)
         output_logits = model(tokens_input, pad_mask_input)
-        output_token = decode_next(output_logits[0][-1])
+        output_token = decode_next(output_logits[0][-1], avoid_unk=True)
+        if output_token[0] == tokenizer.token_to_idx[tokenizer.UNKNOWN_TOKEN]:
+            output_token = output_token[1]
+        else:
+            output_token = output_token[0]
         tokens.append(output_token)
         pad_mask.append(0)
         if output_token == tokenizer.token_to_idx[tokenizer.EOS_TOKEN]:
@@ -54,7 +62,6 @@ def main(args):
     print(tokenizer.decode(tokens))
 
     # TODO: Peplexity
-    # TODO: Check why outputs are not deterministic
 
 
 if __name__ == "__main__":
