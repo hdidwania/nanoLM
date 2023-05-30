@@ -1,9 +1,9 @@
 import argparse
-import os
 
 import torch
 from torch.nn import CrossEntropyLoss
 from torch.optim import Adam
+from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
 
 import tokenizer as tokenizer_
@@ -46,6 +46,7 @@ def main(args):
 
     loss_fn = CrossEntropyLoss(reduction="none").to(device)
     optimizer = Adam(model.parameters(), lr=args.lr)
+    lr_scheduler = StepLR(optimizer, step_size=5, gamma=0.5)
 
     i_step_global = 0
     for i_epoch in range(args.n_epochs):
@@ -78,12 +79,13 @@ def main(args):
 
             epoch_loss_sum += loss_val
             print(
-                "\rGlobal Step {:3d} | Epoch {:2d}/{:2d} Step {:3d}/{:3d} | Loss {:.4f}".format(
+                "\rGlobal Step {:3d} | Epoch {:2d}/{:2d} Step {:3d}/{:3d} | LR {:e} | Loss {:.4f}".format(
                     i_step_global,
                     i_epoch + 1,
                     args.n_epochs,
                     i_step + 1,
                     len(dataloader),
+                    lr_scheduler.get_last_lr()[-1],
                     epoch_loss_sum / (i_step + 1),
                 ),
                 end="",
@@ -94,6 +96,8 @@ def main(args):
                 torch.save(model.state_dict(), SAVE_PATH.format(i_step_global))
 
         print()
+        lr_scheduler.step()
+
     # TODO Train test split?
     # TODO End of epoch test on test data?
     # TODO Number of params
