@@ -31,10 +31,7 @@ class TransformerBlock(Module):
 
     def forward(self, x_input, pad_mask):
         B, N, _ = x_input.shape
-        # print(x_input)
         V = self.Wv(x_input)
-        # print(V)
-        # input()
         V = V.view(B, N, self.heads, self.dims_per_head).transpose(1, 2)
 
         attention_matrix = self.calc_attention_weights(x_input, pad_mask)
@@ -116,8 +113,6 @@ class LanguageModel(Module):
 
         # Final logits
         self.Wout = Linear(self.dims, self.vocab_size).to(self.device)
-
-        self.dropout = Dropout(p=0.2).to(self.device)
 
     def forward(self, x, pad_mask):
         x = self.word_emb(x) + self.pos_emb[:, : x.size(1)]
