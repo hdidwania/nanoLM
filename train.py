@@ -116,7 +116,7 @@ if __name__ == "__main__":
         "--tokenizer", help="Type of tokenizer", choices=["word", "char"], required=True
     )
     parser.add_argument(
-        "--tokenizer_path",
+        "--tokenizer-path",
         help="Path of pickle file for loading the tokenizer",
         required=True,
     )
