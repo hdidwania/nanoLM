@@ -1,5 +1,6 @@
 import argparse
 
+import numpy as np
 import torch
 
 import tokenizer as tokenizer_
@@ -47,6 +48,8 @@ class TextGenerator:
 
         self.mode_to_fn = {
             "greedy": self.greedy_decode,
+            "beam-search": self.beam_search,
+            "sample": self.sample,
         }
 
     def generate(self, context, mode):
@@ -54,13 +57,17 @@ class TextGenerator:
         output = self.mode_to_fn[mode](tokens, pad_mask)
         return output
 
+    def get_logits(self, tokens, mask):
+        token_tensor = torch.tensor([tokens]).to(self.device)
+        mask_tensor = torch.tensor([mask]).to(self.device)
+
+        logits = self.model(token_tensor, mask_tensor)
+        logits = logits[0][-1]
+        return logits.detach()
+
     def greedy_decode(self, tokens, pad_mask):
         while len(tokens) < self.sentence_maxlen:
-            tokens_input = torch.tensor([tokens]).to(self.device)
-            pad_mask_input = torch.tensor([pad_mask]).to(self.device)
-
-            logits = self.model(tokens_input, pad_mask_input)
-            logits = logits[0][-1]
+            logits = self.get_logits(tokens, pad_mask)
 
             output_token = torch.topk(logits, k=2)
             output_token = output_token.indices.cpu().numpy().tolist()
@@ -72,6 +79,60 @@ class TextGenerator:
             else:
                 output_token = output_token[0]
 
+            tokens.append(output_token)
+            pad_mask.append(0)
+            if output_token == self.tokenizer.token_to_idx[self.tokenizer.EOS_TOKEN]:
+                break
+        return self.tokenizer.decode(tokens)
+
+    def beam_search(self, tokens, pad_mask, num_beams=10):
+        hypotheses = list()
+        hypotheses.append([tokens, pad_mask, 0.0])
+        while True:
+            new_hypotheses = list()
+            for h_tokens, h_mask, h_score in hypotheses:
+                if (
+                    len(h_tokens) >= self.sentence_maxlen
+                    or h_tokens[-1]
+                    == self.tokenizer.token_to_idx[self.tokenizer.EOS_TOKEN]
+                ):
+                    continue
+                logits = self.get_logits(h_tokens, h_mask)
+                output_tokens = torch.topk(logits, k=num_beams + 1)
+                output_scores = output_tokens.values.cpu().numpy().tolist()
+                output_tokens = output_tokens.indices.cpu().numpy().tolist()
+                for i in range(num_beams + 1):
+                    if (
+                        output_tokens[i]
+                        == self.tokenizer.token_to_idx[self.tokenizer.UNKNOWN_TOKEN]
+                    ):
+                        continue
+                    new_hypotheses.append(
+                        [
+                            h_tokens + [output_tokens[i]],
+                            h_mask + [0],
+                            h_score + np.log(output_scores[i]),
+                        ]
+                    )
+            hypotheses = hypotheses + new_hypotheses
+            hypotheses.sort(key=lambda x: x[-1], reverse=True)
+            hypotheses = hypotheses[:num_beams]
+            if len(new_hypotheses) == 0:
+                break
+        return self.tokenizer.decode(hypotheses[0][0])
+
+    def sample(self, tokens, pad_mask, temperature=1.0):
+        while len(tokens) < self.sentence_maxlen:
+            logits = self.get_logits(tokens, pad_mask)
+            token_probs = torch.softmax(logits / temperature, dim=0).cpu().numpy()
+            output_token = self.tokenizer.token_to_idx[self.tokenizer.UNKNOWN_TOKEN]
+            while (
+                output_token
+                == self.tokenizer.token_to_idx[self.tokenizer.UNKNOWN_TOKEN]
+            ):
+                output_token = np.random.choice(
+                    range(0, len(token_probs)), p=token_probs
+                )
             tokens.append(output_token)
             pad_mask.append(0)
             if output_token == self.tokenizer.token_to_idx[self.tokenizer.EOS_TOKEN]:
