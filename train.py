@@ -10,10 +10,6 @@ import tokenizer as tokenizer_
 from dataset import MovieData
 from model import LanguageModel
 
-######### TODO MAIN #################
-# SELECT ANOTHER DATASET
-# OR CLEAN NON ENGLISH DATA
-####################################
 
 tokenizer_class_dict = {
     "word": tokenizer_.WordTokenizer,
@@ -99,8 +95,6 @@ def main(args):
         lr_scheduler.step()
 
     # TODO Train test split?
-    # TODO End of epoch test on test data?
-    # TODO Number of params
 
 
 if __name__ == "__main__":

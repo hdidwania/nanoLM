@@ -2,8 +2,6 @@ import numpy as np
 import torch
 from torch.nn import Dropout, Embedding, LayerNorm, Linear, Module, ReLU
 
-# TODO delete unrequired stuff : del
-
 
 class TransformerBlock(Module):
     def __init__(self, dims, heads, device="cpu"):
@@ -90,7 +88,7 @@ class LanguageModel(Module):
             padding_idx=padding_idx,
         ).to(self.device)
 
-        # Understand position embedding layer TODO
+        # TODO: Understand position embedding layer
         # Copied from: https://nlp.seas.harvard.edu/annotated-transformer/
         self.pos_emb = torch.zeros(maxlen, self.dims).to(self.device)
         position = torch.arange(0, maxlen).unsqueeze(1)

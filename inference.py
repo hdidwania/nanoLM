@@ -155,7 +155,6 @@ def main(args):
     )
     text = text_generator.generate(context_text, args.decode_mode)
     print(text)
-    # TODO: Peplexity
 
 
 if __name__ == "__main__":
