@@ -23,7 +23,6 @@ class TransformerBlock(Module):
         self.Wout = Linear(self.dims, self.dims)
 
         self.dropout = Dropout(p=0.2)
-        # TODO: Understand LayerNorm
         self.layernorm = LayerNorm(self.dims)
         self.relu = ReLU()
 
@@ -88,7 +87,6 @@ class LanguageModel(Module):
             padding_idx=padding_idx,
         ).to(self.device)
 
-        # TODO: Understand position embedding layer
         # Copied from: https://nlp.seas.harvard.edu/annotated-transformer/
         self.pos_emb = torch.zeros(maxlen, self.dims).to(self.device)
         position = torch.arange(0, maxlen).unsqueeze(1)
