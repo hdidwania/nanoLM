@@ -55,8 +55,8 @@ python train.py --n_epochs 25 --batch_size 32 --tokenizer word --tokenizer-path 
 This created a model with 14M parameters, with each transformer block having 1M parameters.
 <br>
 The train loss and perplexity curve are shown below: <br>
-![Train Loss](imgs/train-loss-curve.jpg "Train Loss")
-![Perplexity](imgs/perplexity-curve.jpg "Perplexity")
+<img class="img-fluid" src="./imgs/train-loss-curve.jpg" width=300>
+<img class="img-fluid" src="./imgs/perplexity-curve.jpg" width=300>
 <br>
 Although the training loss looks like moving towards convergence steadily, the perplexity curve suggests that the model starts overfitting. This might be due to small dataset. 
 
