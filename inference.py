@@ -52,9 +52,14 @@ class TextGenerator:
             "sample": self.sample,
         }
 
-    def generate(self, context, mode):
+    def generate(self, context, mode, num_beams, temperature):
         tokens, pad_mask = self.tokenizer.encode(context, return_pad_mask=True)
-        output = self.mode_to_fn[mode](tokens, pad_mask)
+        output = self.mode_to_fn[mode](
+            tokens=tokens,
+            pad_mask=pad_mask,
+            num_beams=num_beams,
+            temperature=temperature,
+        )
         return output
 
     def get_logits(self, tokens, mask):
@@ -65,7 +70,10 @@ class TextGenerator:
         logits = logits[0][-1]
         return logits.detach()
 
-    def greedy_decode(self, tokens, pad_mask):
+    def greedy_decode(self, **kwargs):
+        tokens = kwargs.get("tokens")
+        pad_mask = kwargs.get("pad_mask")
+
         while len(tokens) < self.sentence_maxlen:
             logits = self.get_logits(tokens, pad_mask)
 
@@ -85,7 +93,12 @@ class TextGenerator:
                 break
         return self.tokenizer.decode(tokens)
 
-    def beam_search(self, tokens, pad_mask, num_beams=10):
+    def beam_search(self, **kwargs):
+        tokens = kwargs.get("tokens")
+        pad_mask = kwargs.get("pad_mask")
+        num_beams = kwargs.get("num_beams")
+        assert num_beams != None
+
         hypotheses = list()
         hypotheses.append([tokens, pad_mask, 0.0])
         while True:
@@ -121,7 +134,12 @@ class TextGenerator:
                 break
         return self.tokenizer.decode(hypotheses[0][0])
 
-    def sample(self, tokens, pad_mask, temperature=1.0):
+    def sample(self, **kwargs):
+        tokens = kwargs.get("tokens")
+        pad_mask = kwargs.get("pad_mask")
+        temperature = kwargs.get("temperature")
+        assert temperature != None
+
         while len(tokens) < self.sentence_maxlen:
             logits = self.get_logits(tokens, pad_mask)
             token_probs = torch.softmax(logits / temperature, dim=0).cpu().numpy()
@@ -153,7 +171,9 @@ def main(args):
         model_path=args.model_path,
         sentence_maxlen=args.maxlen,
     )
-    text = text_generator.generate(context_text, args.decode_mode)
+    text = text_generator.generate(
+        context_text, args.decode_mode, args.num_beams, args.temperature
+    )
     print(text)
 
 
@@ -178,6 +198,8 @@ if __name__ == "__main__":
     )
     parser.add_argument("--model-path", help="Path to saved model", required=True)
     parser.add_argument("--decode-mode", help="Decoding strategy to use", required=True)
+    parser.add_argument("--num-beams", help="Beam Width for Beam Search", type=int)
+    parser.add_argument("--temperature", help="Temperature for sampling", type=float)
 
     args = parser.parse_args()
     main(args)
