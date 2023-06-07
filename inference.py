@@ -6,9 +6,6 @@ import torch
 import tokenizer as tokenizer_
 from model import LanguageModel
 
-MAXLEN = 512
-MINFREQ = 0
-
 tokenizer_class_dict = {
     "word": tokenizer_.WordTokenizer,
     "char": tokenizer_.CharTokenizer,
@@ -37,7 +34,7 @@ class TextGenerator:
             heads=model_heads,
             nblocks=model_blocks,
             vocab_size=len(self.tokenizer.vocab),
-            maxlen=MAXLEN,
+            maxlen=sentence_maxlen,
             padding_idx=self.tokenizer.token_to_idx["<PAD>"],
             device=self.device,
         )
