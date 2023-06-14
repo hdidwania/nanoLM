@@ -44,6 +44,8 @@ The model can also be loaded on a gradio app (shown below) using the command
 ```
 python app.py --tokenizer <tokenizer_type> --tokenizer-path <tokenizer_path>  --maxlen <maxlen> --minfreq <minfreq> --model-path <model_path>  --dims <dims> --heads <heads> --nblocks <blocks> 
 ```
+<img class="img-fluid" src="./imgs/app-interface.png" width=300>
+
 
 
 # Results
