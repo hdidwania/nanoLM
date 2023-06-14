@@ -40,6 +40,11 @@ python inference.py --tokenizer <tokenizer_type> --tokenizer-path <tokenizer_pat
 ```
 The command requires the tokenizer and model parameters, along with their paths. `<decode_mode>` can be specified to use one of the following decoding strategies- `greedy`, `beam-search` and `sample`. 
 
+The model can also be loaded on a gradio app (shown below) using the command 
+```
+python app.py --tokenizer <tokenizer_type> --tokenizer-path <tokenizer_path>  --maxlen <maxlen> --minfreq <minfreq> --model-path <model_path>  --dims <dims> --heads <heads> --nblocks <blocks> 
+```
+
 
 # Results
 The model was trained and tested on the Wikipedia Movie Plots dataset. A word-based tokenizer was used with maxlen 128 and minfreq 5.
@@ -87,5 +92,4 @@ I am pausing this work at this checkpoint, but I would like to visit it sometime
 - Efficient inference using quantization
 - Attention Visualization
 - BPE Tokenization
-- Gradio app and hosting on hugginface spaces
 - Improving the model performance by using a larger dataset (when I have access to a better GPU)
