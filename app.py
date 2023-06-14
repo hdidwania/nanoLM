@@ -10,6 +10,8 @@ tokenizer_class_dict = {
     "char": tokenizer_.CharTokenizer,
 }
 
+HEAD_HTML = "<h1> NanoLM - Wikipedia Movie Plots"
+
 
 def main(args):
     text_generator = TextGenerator(
@@ -24,7 +26,8 @@ def main(args):
         sentence_maxlen=args.maxlen,
     )
 
-    with gr.Blocks() as demo:
+    with gr.Blocks(title="NanoLM") as demo:
+        gr.HTML(value=HEAD_HTML)
         in_context = gr.Text(label="Context")
         with gr.Row():
             in_mode = gr.Radio(
